@@ -46,7 +46,7 @@ CREATE TABLE jogadores (
     altura_cm SMALLINT CHECK (altura_cm > 100 AND altura_cm < 230),
     data_nascimento DATE,
     idade SMALLINT CHECK (idade > 15 AND idade < 50),
-    valor_mercado_eur NUMERIC(12,2),
+    valor_mercado_euro NUMERIC(12,2),
     clube_anterior VARCHAR(100)
 );
 
