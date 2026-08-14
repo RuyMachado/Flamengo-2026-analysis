@@ -10,7 +10,7 @@ CREATE TABLE competicoes (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
     temporada SMALLINT NOT NULL,
-    tipo VARCHAR(20) CHECK (tipo IN ('Nacional', 'Continental', 'Estadual', 'Copa'))
+    tipo VARCHAR(20) CHECK (tipo IN ('Nacional', 'Continental', 'Internacional'))
 );
 
 -- =====================================================================
