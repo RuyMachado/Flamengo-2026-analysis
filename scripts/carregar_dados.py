@@ -6,17 +6,17 @@ O que ele faz:
   2. Conecta no PostgreSQL usando as credenciais do .env
   3. Insere linhas novas e atualiza linhas ja existentes (upsert), respeitando a ordem de dependencia das Foreign Keys
 
-Tabelas com upsert (que tem UNIQUE constraint no banco):
+Todas as tabelas usam upsert (todas tem UNIQUE constraint no banco):
+  - treinadores                        (chave: nome)
+  - times                              (chave: nome)
+  - competicoes                        (chave: nome + temporada)
   - jogadores                          (chave: nome)
+  - contratos_jogador                  (chave: jogador_id + data_contratacao)
   - estatisticas_time_competicao       (chave: time_id + competicao_id)
   - estatisticas_jogador_competicao    (chave: jogador_id + competicao_id)
 
-Tabelas sem upsert (ainda nao tem UNIQUE constraint) -> so fazem INSERT.
-Rodar o script duas vezes com o mesmo CSV nessas tabelas gera duplicata:
-  - treinadores
-  - times
-  - competicoes
-  - contratos_jogador
+O script pode ser rodado quantas vezes for necessario, mesmo repetindo
+linhas ja inseridas antes -> nunca duplica, so atualiza.
 
 Como rodar:
   python carregar_dados.py
@@ -61,21 +61,15 @@ def ler_csv(nome_arquivo):
     return df
 
 
-def inserir_simples(df, tabela):
-    """
-    INSERT simples, sem upsert.
-    Usar so em tabelas sem UNIQUE constraint (treinadores, times,
-    competicoes, contratos_jogador). Rodar duas vezes duplica dados.
-    """
-    df.to_sql(tabela, engine, if_exists="append", index=False)
-    print(f"[{tabela}] {len(df)} linha(s) inserida(s) (insert simples).")
-
-
 def upsert(df, tabela, colunas_conflito):
     """
     INSERT ON CONFLICT DO UPDATE
     Usar em tabelas que JA TEM UNIQUE constraint no banco:
+      - treinadores                      -> colunas_conflito=["nome"]
+      - times                            -> colunas_conflito=["nome"]
+      - competicoes                      -> colunas_conflito=["nome", "temporada"]
       - jogadores                        -> colunas_conflito=["nome"]
+      - contratos_jogador                -> colunas_conflito=["jogador_id", "data_contratacao"]
       - estatisticas_time_competicao     -> colunas_conflito=["time_id", "competicao_id"]
       - estatisticas_jogador_competicao  -> colunas_conflito=["jogador_id", "competicao_id"]
     """
@@ -106,49 +100,21 @@ def upsert(df, tabela, colunas_conflito):
 # ---------------------------------------------------------------------------
 
 def main():
-    # 1) treinadores -> sem dependencia
+    # 1) treinadores -> sem dependencia, TEM unique constraint (nome)
     df = ler_csv("treinadores.csv")
-    inserir_simples(df, "treinadores")
+    upsert(df, "treinadores", colunas_conflito=["nome"])
 
-    # 2) times -> depende de treinadores (treinador_id)
+    # 2) times -> depende de treinadores (treinador_id), TEM unique constraint (nome)
     df = ler_csv("times.csv")
-    inserir_simples(df, "times")
+    upsert(df, "times", colunas_conflito=["nome"])
 
-    # 3) competicoes -> sem dependencia
+    # 3) competicoes -> sem dependencia, TEM unique constraint (nome + temporada)
     df = ler_csv("competicoes.csv")
-    inserir_simples(df, "competicoes")
+    upsert(df, "competicoes", colunas_conflito=["nome", "temporada"])
 
     # 4) jogadores -> sem dependencia, TEM unique constraint (nome)
     df = ler_csv("jogadores.csv")
     upsert(df, "jogadores", colunas_conflito=["nome"])
-
-    # 5) contratos_jogador -> depende de jogadores (jogador_id)
-    #    ATENCAO: jogador_id no CSV precisa ser o id real gerado pelo banco.
-    #    Consulte antes: SELECT id, nome FROM jogadores ORDER BY id;
-    csv_contratos = DATA_DIR / "contratos_jogador.csv"
-    if csv_contratos.exists():
-        df = ler_csv("contratos_jogador.csv")
-        inserir_simples(df, "contratos_jogador")
-    else:
-        print("[contratos_jogador] CSV ainda nao existe, pulando.")
-
-    # 6) estatisticas_time_competicao -> depende de times + competicoes
-    csv_est_time = DATA_DIR / "estatisticas_time_competicao.csv"
-    if csv_est_time.exists():
-        df = ler_csv("estatisticas_time_competicao.csv")
-        upsert(df, "estatisticas_time_competicao",
-               colunas_conflito=["time_id", "competicao_id"])
-    else:
-        print("[estatisticas_time_competicao] CSV ainda nao existe, pulando.")
-
-    # 7) estatisticas_jogador_competicao -> depende de jogadores + competicoes
-    csv_est_jogador = DATA_DIR / "estatisticas_jogador_competicao.csv"
-    if csv_est_jogador.exists():
-        df = ler_csv("estatisticas_jogador_competicao.csv")
-        upsert(df, "estatisticas_jogador_competicao",
-               colunas_conflito=["jogador_id", "competicao_id"])
-    else:
-        print("[estatisticas_jogador_competicao] CSV ainda nao existe, pulando.")
 
     print("\nCarregamento finalizado.")
 

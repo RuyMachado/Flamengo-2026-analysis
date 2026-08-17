@@ -251,5 +251,20 @@ CREATE TABLE estatisticas_jogador_competicao (
 ALTER TABLE estatisticas_time_competicao
 ADD CONSTRAINT uq_time_competicao UNIQUE (time_id, competicao_id);
 
+ALTER TABLE jogadores
+ADD CONSTRAINT uq_jogador_nome UNIQUE (nome);
+
 ALTER TABLE estatisticas_jogador_competicao
 ADD CONSTRAINT uq_jogador_competicao UNIQUE (jogador_id, competicao_id);
+
+ALTER TABLE times
+ADD CONSTRAINT uq_time_nome UNIQUE (nome);
+
+ALTER TABLE competicoes
+ADD CONSTRAINT uq_competicao_nome_temporada UNIQUE (nome, temporada);
+
+ALTER TABLE contratos_jogador
+ADD CONSTRAINT uq_contrato_jogador_data UNIQUE (jogador_id, data_contratacao);
+
+ALTER TABLE treinadores
+ADD CONSTRAINT uq_treinador_nome UNIQUE (nome);
